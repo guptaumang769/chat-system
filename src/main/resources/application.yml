@@ -1,0 +1,63 @@
+spring:
+  application:
+    name: chat-system
+
+  datasource:
+    url: ${DB_URL:jdbc:postgresql://localhost:5432/chat}
+    username: ${DB_USER:chat}
+    password: ${DB_PASSWORD:chat}
+
+  jpa:
+    hibernate:
+      # Flyway owns the schema; Hibernate only validates the mapping against it.
+      ddl-auto: validate
+    open-in-view: false
+    properties:
+      hibernate:
+        format_sql: true
+    show-sql: false
+
+  flyway:
+    enabled: true
+    baseline-on-migrate: true
+
+  data:
+    redis:
+      host: ${REDIS_HOST:localhost}
+      port: ${REDIS_PORT:6379}
+
+  kafka:
+    bootstrap-servers: ${KAFKA_BOOTSTRAP_SERVERS:localhost:9092}
+
+server:
+  port: 8095
+
+management:
+  endpoints:
+    web:
+      exposure:
+        include: health,info,metrics,prometheus
+  endpoint:
+    health:
+      show-details: when_authorized
+  metrics:
+    tags:
+      # Common tag stamped on every meter so a shared Prometheus can slice by application.
+      application: ${spring.application.name}
+    distribution:
+      percentiles-histogram:
+        http.server.requests: true
+
+chat:
+  # Identifies this connection server in presence keys and cross-node envelopes. Give each
+  # replica a distinct id (e.g. the pod name) so multi-node routing works.
+  node-id: ${CHAT_NODE_ID:node-1}
+  presence:
+    # How often (ms) we re-stamp the Redis presence key so connected users stay online.
+    # Must be shorter than the 30s TTL in PresenceService.
+    heartbeat-ms: ${CHAT_PRESENCE_HEARTBEAT_MS:20000}
+
+# Outbox relay: how often the poller ships unpublished message events to Kafka.
+outbox:
+  poll:
+    fixed-delay-ms: ${OUTBOX_POLL_DELAY_MS:2000}
